@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+:root {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: #F8FAFC;
+  /* Force the root to fill the screen */
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100vh;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100vh;
+  /* Center children only if they aren't full-width */
+  display: block; 
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+}

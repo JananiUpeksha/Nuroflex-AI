@@ -1,0 +1,6 @@
+.venv/
+node_modules/
+*.csv
+*.db
+*.h5
+Backend/.venv/
