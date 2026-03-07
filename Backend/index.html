@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>NeuroFlex AI Dashboard</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; padding: 30px; }
+        .container { max-width: 1200px; margin: auto; }
+        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); margin-bottom: 25px; }
+        .grid { display: grid; grid-template-columns: 1.4fr 0.6fr; gap: 25px; }
+        .header-flex { display: flex; justify-content: space-between; align-items: center; }
+        .problem-tag { display: inline-block; padding: 6px 12px; border-radius: 20px; font-weight: bold; font-size: 14px; margin-top: 10px; }
+        .burnout { background: #ffeaa7; color: #d63031; border: 1px solid #fab1a0; }
+        .gap { background: #fab1a0; color: #c0392b; }
+        .flow { background: #55efc4; color: #00b894; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        td, th { padding: 15px; border-bottom: 1px solid #f1f2f6; text-align: left; }
+        .btn { background: #0984e3; color: white; border: none; padding: 12px 25px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        select { padding: 12px; border-radius: 8px; border: 1px solid #dfe6e9; width: 250px; }
+        .stat-box { background: #f9f9f9; padding: 15px; border-radius: 8px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card header-flex">
+            <div><h1>🧠 NeuroFlex AI: Admin Portal</h1></div>
+            <div>
+                <select id="studentId">
+                    <option value="S01">Student 001: Janani Upeksha</option>
+                    <option value="S02">Student 002: Aman Perera</option>
+                    <option value="S03">Student 003: Sarah Silva</option>
+                    <option value="S04">Student 004: Raj Kumar</option>
+                    <option value="S05">Student 005: Li Wei</option>
+                    <option value="S06">Student 006: Elena Rossi</option>
+                    <option value="S07">Student 007: Victor Hugo</option>
+                    <option value="S08">Student 008: Chloe Bennet</option>
+                    <option value="S09">Student 009: Omar Hassan</option>
+                    <option value="S10">Student 010: Yuki Tanaka</option>
+                </select>
+                <button class="btn" onclick="generatePlan()">Generate Study Plan</button>
+            </div>
+        </div>
+        <div class="grid">
+            <div class="card">
+                <h3>📅 Weekly Study Itinerary</h3>
+                <div id="plan-table">Select a student and click generate.</div>
+            </div>
+            <div class="card">
+                <h3>📊 Instructor Diagnostic Report</h3>
+                <div id="diagnostic-info">Waiting...</div>
+                <hr style="border:0; border-top:1px solid #eee; margin:20px 0;">
+                <h3>📈 Projected Outcome</h3>
+                <div id="prognosis-info">---</div>
+            </div>
+        </div>
+    </div>
+    <script>
+        async function generatePlan() {
+            const id = document.getElementById('studentId').value;
+            const res = await fetch('http://127.0.0.1:8000/generate-7day-plan/' + id);
+            const data = await res.json();
+            let table = '<table><tr><th>Day</th><th>Task Description</th></tr>';
+            data.weekly_plan.forEach(d => { table += `<tr><td>${d.day}</td><td>${d.task}</td></tr>`; });
+            document.getElementById('plan-table').innerHTML = table + '</table>';
+            const tagClass = data.problem_type === 'Cognitive Burnout' ? 'burnout' : (data.problem_type === 'Foundational Gap' ? 'gap' : 'flow');
+            document.getElementById('diagnostic-info').innerHTML = `
+                <div class="problem-tag ${tagClass}">${data.problem_type}</div>
+                <div class="stat-box"><strong>Diagnosis:</strong> ${data.diagnosis}</div>`;
+            document.getElementById('prognosis-info').innerHTML = `
+                <div class="stat-box" style="background:#e3f2fd; border-left:4px solid #0984e3;">
+                    <strong>Expected Mastery:</strong> ${data.prognosis.final_m}<br>
+                    <strong>Final Status:</strong> ${data.prognosis.outcome}
+                </div>`;
+        }
+    </script>
+</body>
+</html>
