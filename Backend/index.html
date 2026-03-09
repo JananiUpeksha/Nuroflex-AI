@@ -1,75 +1,256 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>NeuroFlex AI Dashboard</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeuroFlex | Instructor Analytics Hub</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; padding: 30px; }
-        .container { max-width: 1200px; margin: auto; }
-        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); margin-bottom: 25px; }
-        .grid { display: grid; grid-template-columns: 1.4fr 0.6fr; gap: 25px; }
-        .header-flex { display: flex; justify-content: space-between; align-items: center; }
-        .problem-tag { display: inline-block; padding: 6px 12px; border-radius: 20px; font-weight: bold; font-size: 14px; margin-top: 10px; }
-        .burnout { background: #ffeaa7; color: #d63031; border: 1px solid #fab1a0; }
-        .gap { background: #fab1a0; color: #c0392b; }
-        .flow { background: #55efc4; color: #00b894; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        td, th { padding: 15px; border-bottom: 1px solid #f1f2f6; text-align: left; }
-        .btn { background: #0984e3; color: white; border: none; padding: 12px 25px; border-radius: 8px; cursor: pointer; font-weight: bold; }
-        select { padding: 12px; border-radius: 8px; border: 1px solid #dfe6e9; width: 250px; }
-        .stat-box { background: #f9f9f9; padding: 15px; border-radius: 8px; margin-top: 10px; }
+        :root { 
+            --primary: #6C4AB6; 
+            --primary-light: #9D84D8;
+            --bg: #F0F2F5; 
+            --card: #FFFFFF; 
+            --text-main: #1C1E21;
+            --text-muted: #65676B;
+        }
+
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background-color: var(--bg); 
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px; 
+        }
+
+        .container { max-width: 1300px; margin: auto; }
+
+        /* Header Section */
+        .header { 
+            background: var(--card); 
+            padding: 20px 40px; 
+            border-radius: 24px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 25px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
+        }
+
+        .header h1 { margin: 0; font-size: 24px; color: var(--primary); }
+
+        /* Controls */
+        .controls { display: flex; gap: 15px; align-items: center; }
+
+        select { 
+            padding: 12px 20px; 
+            border-radius: 14px; 
+            border: 2px solid #E4E6EB; 
+            width: 280px; 
+            font-size: 15px;
+            font-weight: 600; 
+            outline: none;
+            cursor: pointer;
+        }
+
+        .btn { 
+            background: var(--primary); 
+            color: white; 
+            border: none; 
+            padding: 14px 28px; 
+            border-radius: 14px; 
+            font-weight: 800; 
+            cursor: pointer; 
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(108, 74, 182, 0.2);
+        }
+
+        .btn:hover { background: var(--primary-light); transform: translateY(-2px); }
+
+        /* Main Layout */
+        .main-content { 
+            display: grid; 
+            grid-template-columns: 1.2fr 0.8fr; 
+            gap: 25px; 
+        }
+
+        .panel { 
+            background: var(--card); 
+            border-radius: 28px; 
+            padding: 35px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.04); 
+            min-height: 500px;
+        }
+
+        .panel h3 { margin-top: 0; font-size: 20px; border-bottom: 2px solid #F0F2F5; padding-bottom: 15px; margin-bottom: 20px; }
+
+        /* Table Styles */
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; color: var(--text-muted); font-size: 13px; text-transform: uppercase; padding: 15px; }
+        td { padding: 18px 15px; border-bottom: 1px solid #F0F2F5; font-size: 15px; }
+        .day-label { font-weight: 800; color: var(--primary); width: 120px; }
+        .task-text { font-weight: 500; color: #4B4D52; }
+
+        /* Summary Components */
+        .badge { 
+            padding: 10px 20px; 
+            border-radius: 12px; 
+            font-weight: 800; 
+            font-size: 14px;
+            display: inline-block; 
+            margin-bottom: 20px; 
+        }
+        .badge-red { background: #FFEBEB; color: #E41E3F; border: 1px solid #FFD1D1; }
+        .badge-blue { background: #E7F3FF; color: #1877F2; border: 1px solid #D1E7FF; }
+
+        .ai-logic-box {
+            background: #F8F9FB;
+            border-left: 5px solid var(--primary);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .data-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .data-card { 
+            background: #FFFFFF; 
+            padding: 18px; 
+            border-radius: 18px; 
+            border: 1px solid #E4E6EB; 
+            transition: border-color 0.3s;
+        }
+        .data-card:hover { border-color: var(--primary-light); }
+        .label { font-size: 11px; color: var(--text-muted); font-weight: 800; text-transform: uppercase; display: block; margin-bottom: 5px; }
+        .val { font-size: 20px; font-weight: 800; color: var(--text-main); }
+
+        .area-tags { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 20px; }
+        .tag-card { padding: 12px; border-radius: 14px; border: 1px solid transparent; }
+        .tag-strong { background: #F0FDF4; border-color: #BBF7D0; color: #166534; }
+        .tag-weak { background: #FFF1F2; border-color: #FECDD3; color: #991B1B; }
+
+        .empty-state { color: var(--text-muted); text-align: center; margin-top: 100px; font-weight: 600; }
     </style>
 </head>
 <body>
+
     <div class="container">
-        <div class="card header-flex">
-            <div><h1>🧠 NeuroFlex AI: Admin Portal</h1></div>
-            <div>
-                <select id="studentId">
-                    <option value="S01">Student 001: Janani Upeksha</option>
-                    <option value="S02">Student 002: Aman Perera</option>
-                    <option value="S03">Student 003: Sarah Silva</option>
-                    <option value="S04">Student 004: Raj Kumar</option>
-                    <option value="S05">Student 005: Li Wei</option>
-                    <option value="S06">Student 006: Elena Rossi</option>
-                    <option value="S07">Student 007: Victor Hugo</option>
-                    <option value="S08">Student 008: Chloe Bennet</option>
-                    <option value="S09">Student 009: Omar Hassan</option>
-                    <option value="S10">Student 010: Yuki Tanaka</option>
+        <div class="header">
+            <h1>📊 Student Success Hub</h1>
+            <div class="controls">
+                <select id="sID">
+                    <option value="USA_5421">Janani Upeksha</option>
+                    <option value="USA_4432">Raj Kumar</option>
+                    <option value="ASIA_2100">Elena Rossi</option>
+                    <option value="USA_8892">Aman Perera</option>
+                    <option value="USA_1023">Sarah Silva</option>
+                    <option value="USA_9901">Li Wei</option>
+                    <option value="ASIA_5543">Victor Hugo</option>
+                    <option value="ASIA_3321">Chloe Bennet</option>
+                    <option value="ASIA_7781">Omar Hassan</option>
+                    <option value="ASIA_1102">Yuki Tanaka</option>
                 </select>
-                <button class="btn" onclick="generatePlan()">Generate Study Plan</button>
+                <button class="btn" onclick="fetchPlan()">Generate Analytics</button>
             </div>
         </div>
-        <div class="grid">
-            <div class="card">
-                <h3>📅 Weekly Study Itinerary</h3>
-                <div id="plan-table">Select a student and click generate.</div>
+
+        <div class="main-content">
+            <div class="panel">
+                <h3>📅 Weekly Neural Learning Path</h3>
+                <div id="plan-view">
+                    <div class="empty-state">Select a student profile to view their AI-generated schedule.</div>
+                </div>
             </div>
-            <div class="card">
-                <h3>📊 Instructor Diagnostic Report</h3>
-                <div id="diagnostic-info">Waiting...</div>
-                <hr style="border:0; border-top:1px solid #eee; margin:20px 0;">
-                <h3>📈 Projected Outcome</h3>
-                <div id="prognosis-info">---</div>
+
+            <div class="panel">
+                <h3>👩‍🏫 Instructor Diagnostic Report</h3>
+                <div id="summary-view">
+                    <div class="empty-state">Waiting for data...</div>
+                </div>
             </div>
         </div>
     </div>
+
+    
+
     <script>
-        async function generatePlan() {
-            const id = document.getElementById('studentId').value;
-            const res = await fetch('http://127.0.0.1:8000/generate-7day-plan/' + id);
-            const data = await res.json();
-            let table = '<table><tr><th>Day</th><th>Task Description</th></tr>';
-            data.weekly_plan.forEach(d => { table += `<tr><td>${d.day}</td><td>${d.task}</td></tr>`; });
-            document.getElementById('plan-table').innerHTML = table + '</table>';
-            const tagClass = data.problem_type === 'Cognitive Burnout' ? 'burnout' : (data.problem_type === 'Foundational Gap' ? 'gap' : 'flow');
-            document.getElementById('diagnostic-info').innerHTML = `
-                <div class="problem-tag ${tagClass}">${data.problem_type}</div>
-                <div class="stat-box"><strong>Diagnosis:</strong> ${data.diagnosis}</div>`;
-            document.getElementById('prognosis-info').innerHTML = `
-                <div class="stat-box" style="background:#e3f2fd; border-left:4px solid #0984e3;">
-                    <strong>Expected Mastery:</strong> ${data.prognosis.final_m}<br>
-                    <strong>Final Status:</strong> ${data.prognosis.outcome}
-                </div>`;
+        async function fetchPlan() {
+            const id = document.getElementById('sID').value;
+            const planView = document.getElementById('plan-view');
+            const summaryView = document.getElementById('summary-view');
+
+            try {
+                // Fetching from your FastAPI Backend
+                const res = await fetch(`http://127.0.0.1:8000/generate-7day-plan/${id}`);
+                
+                if (!res.ok) throw new Error("Backend not responding");
+                
+                const data = await res.json();
+
+                // 1. Render the Weekly Schedule Table
+                let tableHtml = '<table><thead><tr><th>Day</th><th>Task Description</th><th>Predicted Mastery</th></tr></thead><tbody>';
+                data.weekly_plan.forEach(dayData => {
+                    tableHtml += `
+                        <tr>
+                            <td class="day-label">${dayData.day}</td>
+                            <td class="task-text">${dayData.task}</td>
+                            <td><b style="color:var(--primary)">${dayData.m}%</b></td>
+                        </tr>
+                    `;
+                });
+                tableHtml += '</tbody></table>';
+                planView.innerHTML = tableHtml;
+
+                // 2. Render the Advanced Instructor Summary
+                const statusClass = data.status === 'Needs Rest' ? 'badge-red' : 'badge-blue';
+                
+                summaryView.innerHTML = `
+                    <div class="badge ${statusClass}">Current State: ${data.status}</div>
+                    
+                    <div class="ai-logic-box">
+                        <b>🚀 AI Logic & Reasoning:</b><br>
+                        ${data.details.ai_advice}
+                    </div>
+
+                    <div class="data-grid">
+                        <div class="data-card">
+                            <span class="label">Initial Skill Level</span>
+                            <span class="val">${data.details.starting_knowledge}</span>
+                        </div>
+                        <div class="data-card">
+                            <span class="label">Final Prediction</span>
+                            <span class="val">${data.details.final_knowledge}</span>
+                        </div>
+                        <div class="data-card">
+                            <span class="label">Learning Efficiency</span>
+                            <span class="val">${data.details.learning_efficiency}</span>
+                        </div>
+                        <div class="data-card">
+                            <span class="label">Consistency Score</span>
+                            <span class="val">${data.details.consistency_score}</span>
+                        </div>
+                    </div>
+
+                    <div class="area-tags">
+                        <div class="tag-card tag-strong">
+                            <span class="label" style="color:#166534">Student Strength</span>
+                            <b>${data.details.strong_area}</b>
+                        </div>
+                        <div class="tag-card tag-weak">
+                            <span class="label" style="color:#991B1B">Weakness Alert</span>
+                            <b>${data.details.weak_area}</b>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 30px; font-size: 11px; color: #9DA1A7; text-align: center; font-weight: 600;">
+                        GENERATED BY NEUROFLEX DQN MODEL • DATASET: ASSISTMENTS 2026
+                    </div>
+                `;
+
+            } catch (error) {
+                console.error("Connection Error:", error);
+                planView.innerHTML = `<div class="empty-state" style="color:#E41E3F">⚠️ Error: Backend server is offline. Run 'uvicorn app.main:app' to fix.</div>`;
+            }
         }
     </script>
 </body>
