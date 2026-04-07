@@ -1,7 +1,35 @@
+# Environments
 .venv/
+Backend/.venv/
+env/
+venv/
+ENV/
+
+# Dependencies
 node_modules/
+dist/
+build/
+
+# Database & Data
 *.csv
 *.db
+*.sqlite3
 *.h5
-Backend/.venv/
+*.log
+
+# Secrets (CRITICAL)
 .env
+.env.local
+.env.*.local
+
+# Python Cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# IDE & OS Garbage
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
