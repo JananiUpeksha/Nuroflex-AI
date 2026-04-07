@@ -20,11 +20,15 @@ neuro_brain = NeuroTrainer()
 if os.path.exists('app/models/neuro_brain_global.h5'):
     neuro_brain.brain.load_weights('app/models/neuro_brain_global.h5')
 
-# YouTube Service
-YOUTUBE_KEY = "AIzaSyDa5rcHhUdIWIJj8RkK8Yi5hsqZLWA31uc" 
-discovery_service = ContentDiscovery(api_key=YOUTUBE_KEY)
+# Initialize Discovery
+discovery_service = ContentDiscovery()
 
-syllabus = pd.read_csv('math_syllabus.csv')
+# Load Syllabus
+try:
+    syllabus = pd.read_csv('math_syllabus.csv')
+except Exception as e:
+    print(f"❌ Syllabus Load Error: {e}")
+    syllabus = pd.DataFrame()
 
 RESEARCH_DATA = {
     "USA_5421": "Janani Upeksha", "USA_8892": "Aman Perera", "USA_1023": "Sarah Silva",
@@ -32,7 +36,6 @@ RESEARCH_DATA = {
 }
 
 def get_mission_push(t_type, topic):
-    """Generates the high-impact, descriptive mission text."""
     missions = {
         "Video": {
             "title": f"Mission: Unlocking {topic}",
@@ -40,7 +43,7 @@ def get_mission_push(t_type, topic):
         },
         "Quiz": {
             "title": f"Mission: {topic} Instinct",
-            "desc": f"Don't just think—know. This is where your brain turns theory into reflex. Clear the hurdles and lock in the logic. Let's move."
+            "desc": f"Don't just think—know. Turn theory into reflex. Clear the hurdles and lock in the logic. Let's move."
         },
         "Exercise": {
             "title": f"Mission: {topic} Power",
@@ -55,21 +58,17 @@ def get_mission_push(t_type, topic):
 
 @app.get("/generate-7day-plan/{identifier}")
 async def generate_plan(identifier: str):
-    # FIXED: Case-insensitive search to prevent 401 Unauthorized
     student_id = None
     student_name = None
     
-    # URL decoding handling
     clean_name = identifier.replace("%20", " ").strip().lower()
 
     for sid, name in RESEARCH_DATA.items():
         if sid.lower() == clean_name or name.lower() == clean_name:
-            student_id = sid
-            student_name = name
+            student_id, student_name = sid, name
             break
     
     if not student_id:
-        # Fallback to a default user instead of crashing to prevent white screen
         student_id, student_name = "USA_4432", "Raj Kumar"
 
     random.seed(student_id)
@@ -80,6 +79,10 @@ async def generate_plan(identifier: str):
     
     for day in days:
         act_idx = neuro_brain.get_action([m, 0.7, 1.0, 1.0, s, 1.0])
+        
+        if syllabus.empty:
+            raise HTTPException(status_code=500, detail="Syllabus data missing")
+            
         eligible = syllabus[(syllabus['difficulty'] >= m-0.2) & (syllabus['difficulty'] <= m+0.2)]
         if eligible.empty: eligible = syllabus
         target = eligible.sample(1).iloc[0]

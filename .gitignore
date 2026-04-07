@@ -4,5 +4,4 @@ node_modules/
 *.db
 *.h5
 Backend/.venv/
-app/services/discovery.py
 .env
