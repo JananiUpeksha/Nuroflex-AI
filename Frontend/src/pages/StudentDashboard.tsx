@@ -36,9 +36,9 @@ const quickStats = [
   { label: 'Questions',    val: '248',   dot: 'bg-emerald-400' },
 ];
 
-function LessonCard({ lesson }: { lesson: typeof lessons[0] }) {
+function LessonCard({ lesson, index }: { lesson: typeof lessons[0]; index: number }) {
   return (
-    <div className={`${lesson.bg} p-4 rounded-xl hover:shadow-md transition-all hover:scale-[1.02] cursor-pointer group`}>
+    <div key={`lesson-${index}`} className={`${lesson.bg} p-4 rounded-xl hover:shadow-md transition-all hover:scale-[1.02] cursor-pointer group`}>
       <div className="flex gap-3 items-start">
         <div className="w-10 h-10 rounded-xl bg-white shadow-md flex items-center justify-center text-[#6C4AB6] group-hover:scale-110 transition-transform">
           {lesson.icon}
@@ -79,6 +79,17 @@ export default function StudentDashboard({
   const days      = Array.from({ length: daysInMonth }, (_, i) => i + 1);
   const emptyDays = Array.from({ length: firstDayOfMonth }, (_, i) => i);
 
+  // Day headers with unique identifiers
+  const dayHeaders = [
+    { letter: 'S', name: 'Sunday', id: 'sun' },
+    { letter: 'M', name: 'Monday', id: 'mon' },
+    { letter: 'T', name: 'Tuesday', id: 'tue' },
+    { letter: 'W', name: 'Wednesday', id: 'wed' },
+    { letter: 'T', name: 'Thursday', id: 'thu' },
+    { letter: 'F', name: 'Friday', id: 'fri' },
+    { letter: 'S', name: 'Saturday', id: 'sat' }
+  ];
+
   return (
     <div className="flex h-screen overflow-hidden bg-slate-100 font-sans text-slate-900">
       <style>{`
@@ -103,7 +114,7 @@ export default function StudentDashboard({
         }
       `}</style>
 
-      {/* Sidebar – unchanged */}
+      {/* Sidebar */}
       <aside className="w-72 border-r border-slate-200/80 bg-white/80 backdrop-blur-xl flex flex-col shrink-0">
         <div className="p-6 flex items-center gap-2">
           <div className="bg-gradient-to-br from-[#6C4AB6] to-[#9D84D8] text-white p-2 rounded-xl shadow-lg shadow-purple-200">
@@ -135,7 +146,7 @@ export default function StudentDashboard({
             <div className="flex gap-2">
               {achievements.map((ach, i) => (
                 <div
-                  key={i}
+                  key={`achievement-${i}-${ach.title}`}
                   className={`w-8 h-8 rounded-lg bg-gradient-to-br ${ach.color} flex items-center justify-center text-white shadow-lg`}
                 >
                   {ach.icon}
@@ -189,7 +200,7 @@ export default function StudentDashboard({
         <main className="flex-1 p-6 pb-4 overflow-hidden flex flex-col">
           <div className="flex flex-col h-full max-w-7xl mx-auto space-y-5">
 
-            {/* Welcome Banner – unchanged height */}
+            {/* Welcome Banner */}
             <div className="relative rounded-[2rem] overflow-hidden bg-gradient-to-r from-[#6C4AB6] via-[#8A6FD0] to-indigo-600 h-48 shadow-2xl shadow-purple-200/50 shrink-0">
               <div className="absolute inset-0 opacity-20">
                 <div className="absolute top-0 -left-4 w-64 h-64 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl animate-blob" />
@@ -226,7 +237,7 @@ export default function StudentDashboard({
               {/* Left Column */}
               <div className="flex flex-col gap-5 h-full">
 
-                {/* My Lessons – unchanged */}
+                {/* My Lessons */}
                 <div className="glass-card rounded-2xl p-5 flex-1 flex flex-col">
                   <div className="flex justify-between items-center mb-4">
                     <div className="flex items-center gap-2">
@@ -244,7 +255,7 @@ export default function StudentDashboard({
 
                   <div className="grid grid-cols-2 gap-4 flex-1">
                     {lessons.map((lesson, i) => (
-                      <LessonCard key={i} lesson={lesson} />
+                      <LessonCard key={`lesson-card-${i}`} lesson={lesson} index={i} />
                     ))}
                   </div>
                 </div>
@@ -323,7 +334,7 @@ export default function StudentDashboard({
                 </div>
               </div>
 
-              {/* Right Column – unchanged */}
+              {/* Right Column */}
               <div className="flex flex-col gap-5 h-full">
 
                 <div className="glass-card rounded-2xl p-5 flex-1 flex flex-col">
@@ -346,15 +357,21 @@ export default function StudentDashboard({
                     </p>
                   </div>
 
+                  {/* FIXED: Day headers with unique keys */}
                   <div className="grid grid-cols-7 text-[10px] text-slate-400 text-center mb-2 font-bold">
-                    {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(d => <span key={d}>{d}</span>)}
+                    {dayHeaders.map((day) => (
+                      <span key={`day-header-${day.id}`}>{day.letter}</span>
+                    ))}
                   </div>
 
+                  {/* FIXED: Calendar days with unique keys */}
                   <div className="grid grid-cols-7 gap-1 text-center text-xs flex-1 content-start">
-                    {emptyDays.map((_, i) => <div key={i} />)}
+                    {emptyDays.map((_, i) => (
+                      <div key={`empty-day-${i}`} />
+                    ))}
                     {days.slice(0, 28).map(d => (
                       <div
-                        key={d}
+                        key={`calendar-day-${d}`}
                         className={`p-1.5 rounded-xl transition-all ${
                           d === 6
                             ? 'bg-gradient-to-br from-[#6C4AB6] to-[#9D84D8] text-white shadow-md'
@@ -388,7 +405,7 @@ export default function StudentDashboard({
                   <div className="flex-1 flex flex-col justify-between text-xs">
                     <div className="space-y-3">
                       {quickStats.map((stat, i) => (
-                        <div key={i} className="flex justify-between items-center">
+                        <div key={`stat-${i}-${stat.label}`} className="flex justify-between items-center">
                           <div className="flex items-center gap-2">
                             <div className={`w-1 h-1 rounded-full ${stat.dot}`} />
                             <span className="text-[10px] font-bold text-slate-500">{stat.label}</span>
