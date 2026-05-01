@@ -1,0 +1,290 @@
+{
+  "score": "4/5",
+  "archetypes": {
+    "Advanced & Calm": {
+      "timeline": [
+        {
+          "day": 1,
+          "action": "Watch Video",
+          "reward": 0.0533,
+          "mastery": 0.9,
+          "stress": 0.2
+        },
+        {
+          "day": 2,
+          "action": "Watch Video",
+          "reward": 0.0533,
+          "mastery": 0.95,
+          "stress": 0.25
+        },
+        {
+          "day": 3,
+          "action": "Watch Video",
+          "reward": 0.0532,
+          "mastery": 1.0,
+          "stress": 0.3
+        },
+        {
+          "day": 4,
+          "action": "Take a Break",
+          "reward": 0.0,
+          "mastery": 1.0,
+          "stress": 0.0
+        },
+        {
+          "day": 5,
+          "action": "Watch Video",
+          "reward": 0.0032,
+          "mastery": 1.0,
+          "stress": 0.05
+        },
+        {
+          "day": 6,
+          "action": "Watch Video",
+          "reward": 0.0032,
+          "mastery": 1.0,
+          "stress": 0.1
+        },
+        {
+          "day": 7,
+          "action": "Watch Video",
+          "reward": 0.0032,
+          "mastery": 1.0,
+          "stress": 0.15
+        }
+      ],
+      "total_reward": 0.169,
+      "mastery_gain": 0.15,
+      "stress_change": 0.0,
+      "verdict": "REVIEW"
+    },
+    "Average Learner": {
+      "timeline": [
+        {
+          "day": 1,
+          "action": "Watch Video",
+          "reward": 0.0533,
+          "mastery": 0.55,
+          "stress": 0.45
+        },
+        {
+          "day": 2,
+          "action": "Take a Break",
+          "reward": 0.0,
+          "mastery": 0.55,
+          "stress": 0.15
+        },
+        {
+          "day": 3,
+          "action": "Watch Video",
+          "reward": 0.0533,
+          "mastery": 0.6,
+          "stress": 0.2
+        },
+        {
+          "day": 4,
+          "action": "Watch Video",
+          "reward": 0.0533,
+          "mastery": 0.65,
+          "stress": 0.25
+        },
+        {
+          "day": 5,
+          "action": "Watch Video",
+          "reward": 0.0533,
+          "mastery": 0.7,
+          "stress": 0.3
+        },
+        {
+          "day": 6,
+          "action": "Watch Video",
+          "reward": 0.0533,
+          "mastery": 0.75,
+          "stress": 0.35
+        },
+        {
+          "day": 7,
+          "action": "Take a Break",
+          "reward": 0.0,
+          "mastery": 0.75,
+          "stress": 0.05
+        }
+      ],
+      "total_reward": 0.267,
+      "mastery_gain": 0.25,
+      "stress_change": -0.35,
+      "verdict": "PASS"
+    },
+    "Stressed & Burned Out": {
+      "timeline": [
+        {
+          "day": 1,
+          "action": "Take a Break",
+          "reward": 2.0,
+          "mastery": 0.35,
+          "stress": 0.55
+        },
+        {
+          "day": 2,
+          "action": "Take a Break",
+          "reward": 0.0,
+          "mastery": 0.35,
+          "stress": 0.25
+        },
+        {
+          "day": 3,
+          "action": "Active Recall",
+          "reward": 0.1638,
+          "mastery": 0.5,
+          "stress": 0.35
+        },
+        {
+          "day": 4,
+          "action": "Active Recall",
+          "reward": 0.1637,
+          "mastery": 0.65,
+          "stress": 0.45
+        },
+        {
+          "day": 5,
+          "action": "Take a Break",
+          "reward": 0.0,
+          "mastery": 0.65,
+          "stress": 0.15
+        },
+        {
+          "day": 6,
+          "action": "Active Recall",
+          "reward": 0.1637,
+          "mastery": 0.8,
+          "stress": 0.25
+        },
+        {
+          "day": 7,
+          "action": "Take a Break",
+          "reward": 0.0,
+          "mastery": 0.8,
+          "stress": 0.0
+        }
+      ],
+      "total_reward": 2.491,
+      "mastery_gain": 0.45,
+      "stress_change": -0.85,
+      "verdict": "PASS"
+    },
+    "Fast but Stressed": {
+      "timeline": [
+        {
+          "day": 1,
+          "action": "Take a Break",
+          "reward": 2.0,
+          "mastery": 0.65,
+          "stress": 0.45
+        },
+        {
+          "day": 2,
+          "action": "Take a Break",
+          "reward": 0.0,
+          "mastery": 0.65,
+          "stress": 0.15
+        },
+        {
+          "day": 3,
+          "action": "Watch Video",
+          "reward": 0.0533,
+          "mastery": 0.7,
+          "stress": 0.2
+        },
+        {
+          "day": 4,
+          "action": "Watch Video",
+          "reward": 0.0533,
+          "mastery": 0.75,
+          "stress": 0.25
+        },
+        {
+          "day": 5,
+          "action": "Watch Video",
+          "reward": 0.0533,
+          "mastery": 0.8,
+          "stress": 0.3
+        },
+        {
+          "day": 6,
+          "action": "Take a Break",
+          "reward": 0.0,
+          "mastery": 0.8,
+          "stress": 0.0
+        },
+        {
+          "day": 7,
+          "action": "Watch Video",
+          "reward": 0.0533,
+          "mastery": 0.85,
+          "stress": 0.05
+        }
+      ],
+      "total_reward": 2.213,
+      "mastery_gain": 0.2,
+      "stress_change": -0.7,
+      "verdict": "PASS"
+    },
+    "Beginner, Motivated": {
+      "timeline": [
+        {
+          "day": 1,
+          "action": "Watch Video",
+          "reward": 0.0532,
+          "mastery": 0.25,
+          "stress": 0.3
+        },
+        {
+          "day": 2,
+          "action": "Watch Video",
+          "reward": 0.0533,
+          "mastery": 0.3,
+          "stress": 0.35
+        },
+        {
+          "day": 3,
+          "action": "Watch Video",
+          "reward": 0.0533,
+          "mastery": 0.35,
+          "stress": 0.4
+        },
+        {
+          "day": 4,
+          "action": "Watch Video",
+          "reward": 0.0533,
+          "mastery": 0.4,
+          "stress": 0.45
+        },
+        {
+          "day": 5,
+          "action": "Watch Video",
+          "reward": 0.0533,
+          "mastery": 0.45,
+          "stress": 0.5
+        },
+        {
+          "day": 6,
+          "action": "Watch Video",
+          "reward": 0.0533,
+          "mastery": 0.5,
+          "stress": 0.55
+        },
+        {
+          "day": 7,
+          "action": "Take a Break",
+          "reward": 0.0,
+          "mastery": 0.5,
+          "stress": 0.25
+        }
+      ],
+      "total_reward": 0.32,
+      "mastery_gain": 0.3,
+      "stress_change": 0.0,
+      "verdict": "PASS"
+    }
+  }
+}

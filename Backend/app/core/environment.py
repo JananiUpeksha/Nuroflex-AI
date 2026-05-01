@@ -1,27 +1,40 @@
+"""
+app/core/environment.py
+"""
 import numpy as np
-from app.core.neuro_logic import calculate_retention
+
 
 class StudyEnvironment:
+
     def __init__(self):
-        # Actions: 0=Video, 1=Quiz, 2=Active Recall, 3=Break
+        # Actions: 0=Watch Video, 1=Take Quiz, 2=Active Recall, 3=Take a Break
         self.action_effects = {
-            0: {"mastery": 0.05, "stress": 0.05, "speed": -0.01}, # Video: Slow gain
-            1: {"mastery": 0.10, "stress": 0.20, "speed": 0.05},  # Quiz: High stress/High gain
-            2: {"mastery": 0.15, "stress": 0.10, "speed": 0.10}, # Recall: Best for mastery
-            3: {"mastery": 0.00, "stress": -0.30, "speed": 0.00} # Break: Reduces stress
+            0: {"mastery": 0.05, "speed":  0.02, "stress":  0.05},  # Video
+            1: {"mastery": 0.10, "speed":  0.05, "stress":  0.20},  # Quiz
+            2: {"mastery": 0.15, "speed":  0.10, "stress":  0.10},  # Active Recall
+            3: {"mastery": 0.00, "speed":  0.00, "stress": -0.30},  # Break
         }
 
-    def step(self, current_state, action):
+    def step(self, current_state: np.ndarray, action: int) -> np.ndarray:
         """
-        Calculates the 'Next State' based on an action.
-        current_state: [Mastery, Speed, Connectivity, Resilience, Stress, Retention]
-        """
-        new_state = current_state.copy()
-        effect = self.action_effects[action]
+        State: [Mastery, Speed, Connectivity, Resilience, Stress, Retention]
 
-        # Apply Neuro-Logic changes
-        new_state[0] = np.clip(new_state[0] + effect["mastery"], 0, 1) # Mastery
-        new_state[1] = max(0, new_state[1] - effect["speed"])         # Speed
-        new_state[4] = np.clip(new_state[4] + effect["stress"], 0, 1)  # Stress
+        FIX: Original subtracted speed delta which made students SLOWER after
+        studying. Speed now adds correctly with np.clip like every other dimension.
+        """
+        new_state = current_state.copy().astype(np.float32)
+        effect    = self.action_effects[action]
+
+        new_state[0] = np.clip(new_state[0] + effect["mastery"], 0.0, 1.0)  # Mastery
+        new_state[1] = np.clip(new_state[1] + effect["speed"],   0.0, 1.0)  # Speed (fixed)
+        new_state[4] = np.clip(new_state[4] + effect["stress"],  0.0, 1.0)  # Stress
+
+        # Connectivity grows slowly as mastery grows
+        new_state[2] = np.clip(new_state[2] + 0.01 * effect["mastery"], 0.0, 1.0)
+        # Resilience inches up each day
+        new_state[3] = np.clip(new_state[3] + 0.005, 0.0, 1.0)
+        # Retention improves with active learning, decays under heavy stress
+        retention_delta = 0.05 * effect["mastery"] - 0.02 * max(0.0, float(new_state[4]) - 0.7)
+        new_state[5] = np.clip(new_state[5] + retention_delta, 0.0, 1.0)
 
         return new_state

@@ -1,0 +1,250 @@
+"""
+app/main.py
+"""
+from fastapi import FastAPI, Depends, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
+from pydantic import BaseModel
+import os, random
+from datetime import date
+from threading import Lock
+
+from app.core.database       import engine, Base, get_db
+from app.core.trainer        import NeuroTrainer
+from app.core.environment    import StudyEnvironment
+from app.core.dao            import StudentDAO
+from app.models.student_db   import StudentDB
+from app.services.discovery  import ContentDiscovery
+from app.services.ai_service import generate_quiz, generate_weekly_quiz, chat_with_tutor
+
+Base.metadata.create_all(bind=engine)
+app = FastAPI(title="NeuroFlex API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+MODEL_PATH = "app/models/neuro_brain_global.h5"
+trainer    = NeuroTrainer()
+
+if os.path.exists(MODEL_PATH):
+    trainer.brain.load_weights(MODEL_PATH)
+    print(f"✅ Trained model loaded from {MODEL_PATH}")
+else:
+    print("⚠️  WARNING: No trained model found. Run train_global.py then run_training.py")
+
+discovery_service = ContentDiscovery()
+env               = StudyEnvironment()
+
+MAX_DAILY_FETCHES = 150
+_yt_quota: dict   = {"count": 0, "reset_date": date.today()}
+_yt_quota_lock    = Lock()
+
+def _yt_quota_available() -> bool:
+    with _yt_quota_lock:
+        today = date.today()
+        if _yt_quota["reset_date"] != today:
+            _yt_quota["count"]      = 0
+            _yt_quota["reset_date"] = today
+        if _yt_quota["count"] >= MAX_DAILY_FETCHES:
+            return False
+        _yt_quota["count"] += 1
+        return True
+
+_stack_cache:      dict[str, list] = {}
+_stack_cache_lock: Lock            = Lock()
+
+def get_learning_stack(topic: str) -> list:
+    with _stack_cache_lock:
+        if topic in _stack_cache:
+            return _stack_cache[topic]
+    if not _yt_quota_available():
+        print(f"[yt-quota] Daily limit reached, skipping '{topic}'")
+        return []
+    try:
+        stack = discovery_service.fetch_learning_stack(topic)
+    except Exception as exc:
+        print(f"[youtube] fetch failed for '{topic}': {exc}")
+        stack = []
+    with _stack_cache_lock:
+        _stack_cache[topic] = stack
+    return stack
+
+AUTHORIZED_STUDENTS = [
+    "Janani Upeksha", "Aman Perera", "Sarah Silva", "Raj Kumar",
+    "Li Wei",         "Elena Rossi", "Victor Hugo", "Chloe Bennet",
+    "Omar Hassan",    "Yuki Tanaka",
+]
+
+TOPIC_POOL = [
+    "Polynomials", "Chain Rule", "Integration by Parts",
+    "Matrix Multiplication", "Probability",
+]
+
+DAYS    = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+ACTIONS = ["Watch Video", "Take Quiz", "Active Recall", "Take a Break"]
+
+def get_detailed_mission(topic: str, t_type: str) -> str:
+    descriptions = {
+        "Video":    f"Visualizing {topic}: Explore core geometry and logic. Watch how these functions behave in real-time space.",
+        "Quiz":     f"{topic} Instinct: Speed is key. Solve these drills to turn theoretical knowledge into a neural reflex.",
+        "Exercise": f"{topic} Deep Dive: Bridge theory to engineering. Solve problems requiring multi-step logic.",
+        "Rest":     "Neural Consolidation: Your brain is re-wiring. Step away to allow the synaptic connections to solidify.",
+    }
+    return descriptions.get(t_type, f"Advanced neural reinforcement for {topic}.")
+
+def _activity_to_type(activity: str) -> str:
+    if "Video"  in activity: return "Video"
+    if "Quiz"   in activity: return "Quiz"
+    if "Recall" in activity: return "Exercise"
+    return "Rest"
+
+def _to_array(plan_dict: dict) -> list:
+    result = []
+    for day, details in plan_dict.items():
+        activity     = details.get("activity", "")
+        t_type       = _activity_to_type(activity)
+        topic        = details.get("topic", day)
+        stored_stack = details.get("learning_stack")
+        if stored_stack is None and t_type != "Rest":
+            stored_stack = get_learning_stack(topic)
+        result.append({
+            "day":            day,
+            "task_title":     topic,
+            "raw_topic":      topic,
+            "type":           t_type,
+            "instruction":    get_detailed_mission(topic, t_type),
+            "learning_stack": stored_stack or [],
+            "youtube_id":     "5qap5aO4i9A" if t_type == "Rest" else None,
+            "resource_link":  "https://en.wikipedia.org/wiki/Mathematics",
+        })
+    return result
+
+def _build_plan(state, topics: list[str]) -> dict:
+    unique_topics = {t for t in topics if t}
+    stacks = {t: get_learning_stack(t) for t in unique_topics}
+    plan: dict = {}
+    for i, day in enumerate(DAYS):
+        topic    = topics[i]
+        action   = trainer.get_action(state, training=False)
+        activity = ACTIONS[action]
+        t_type   = _activity_to_type(activity)
+        plan[day] = {
+            "topic":          topic,
+            "activity":       activity,
+            "learning_stack": stacks.get(topic, []) if t_type != "Rest" else [],
+        }
+    return plan
+
+@app.on_event("startup")
+def seed_database():
+    db = next(get_db())
+    for name in AUTHORIZED_STUDENTS:
+        if not StudentDAO.get_student(db, name):
+            db.add(StudentDB(
+                student_id           = name,
+                topic_mastery        = {t: 0.5 for t in TOPIC_POOL},
+                response_speed       = {t: 0.5 for t in TOPIC_POOL},
+                connectivity_score   = 0.7,
+                resilience_factor    = 0.7,
+                current_stress_level = 0.3,
+                retention_score      = 0.7,
+                study_plan           = None,
+            ))
+    db.commit()
+
+@app.get("/generate-7day-plan/{student_id}")
+async def generate_plan(student_id: str, db: Session = Depends(get_db)):
+    student = StudentDAO.get_student(db, student_id)
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+    if student.study_plan:
+        return {"weekly_plan": _to_array(student.study_plan)}
+    state  = StudentDAO.get_student_state_vector(db, student_id)
+    topics = random.sample(TOPIC_POOL, 5) + random.sample(TOPIC_POOL, 2)
+    plan   = _build_plan(state, topics)
+    StudentDAO.save_study_plan(db, student_id, plan)
+    return {"weekly_plan": _to_array(plan)}
+
+@app.get("/student-report/{student_id}")
+async def get_student_report(student_id: str, db: Session = Depends(get_db)):
+    student = StudentDAO.get_student(db, student_id)
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+    return {
+        "status": "Optimal State",
+        "details": {
+            "ai_advice":           "Neural growth detected.",
+            "learning_efficiency": "85%",
+            "focus":               "90%",
+            "consistency_score":   "95%",
+            "memory_strength":     "80%",
+            "strong_area":         "Logic",
+            "weak_area":           "Speed",
+        },
+    }
+
+@app.get("/recommend-action/{student_id}")
+async def recommend_action(student_id: str, db: Session = Depends(get_db)):
+    state = StudentDAO.get_student_state_vector(db, student_id)
+    if state is None:
+        raise HTTPException(status_code=404, detail="Student not found")
+    action_idx = trainer.get_action(state, training=False)
+    return {"student_id": student_id, "recommended_action": ACTIONS[action_idx]}
+
+class StateUpdateRequest(BaseModel):
+    mastery_delta: float = 0.0
+    stress_delta:  float = 0.0
+
+@app.post("/update-state/{student_id}")
+async def update_state(student_id: str,
+                       req: StateUpdateRequest,
+                       db: Session = Depends(get_db)):
+    student = StudentDAO.get_student(db, student_id)
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+    StudentDAO.update_student_state(db, student_id,
+                                    mastery_delta=req.mastery_delta,
+                                    stress_delta=req.stress_delta)
+    return {"status": "updated", "student_id": student_id}
+
+@app.get("/quiz/{topic}")
+async def get_quiz(topic: str):
+    try:
+        return {"questions": await generate_quiz(topic)}
+    except ValueError:
+        raise HTTPException(status_code=429, detail="Rate limit reached — please wait a moment")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+class WeeklyQuizRequest(BaseModel):
+    topics: list[str]
+
+@app.post("/quiz/weekly")
+async def get_weekly_quiz(req: WeeklyQuizRequest):
+    if not req.topics:
+        raise HTTPException(status_code=400, detail="No topics provided")
+    try:
+        return {"questions": await generate_weekly_quiz(req.topics)}
+    except ValueError:
+        raise HTTPException(status_code=429, detail="Rate limit reached — please wait a moment")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+class ChatRequest(BaseModel):
+    topic:   str
+    history: list[dict]
+    message: str
+
+@app.post("/chat")
+async def chat(req: ChatRequest):
+    try:
+        return {"reply": await chat_with_tutor(req.topic, req.history, req.message)}
+    except ValueError:
+        raise HTTPException(status_code=429, detail="Rate limit reached — please wait a moment")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

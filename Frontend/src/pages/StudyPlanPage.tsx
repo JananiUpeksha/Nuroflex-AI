@@ -9,7 +9,6 @@ interface StudyPlanProps { userName: string; onBack: () => void; }
 
 const API = 'http://127.0.0.1:8000';
 
-// ── Shared types ──────────────────────────────────────────────────────────────
 interface QuizQuestion {
   question:    string;
   options:     string[];
@@ -18,7 +17,6 @@ interface QuizQuestion {
 }
 interface ChatMessage { role: 'user' | 'ai'; text: string; }
 
-// ── API helpers (pure fetch, zero prompt logic) ────────────────────────────────
 async function fetchQuiz(topic: string): Promise<QuizQuestion[]> {
   const res = await fetch(`${API}/quiz/${encodeURIComponent(topic)}`);
   if (res.status === 429) throw new Error('RATE_LIMITED');
@@ -55,7 +53,17 @@ async function fetchChatReply(
   return data.reply ?? 'No response.';
 }
 
-// ── Reusable Quiz UI (used by both daily & weekly modals) ─────────────────────
+// ── Relaxing YouTube links (opens in new tab — never embeds) ──────────────────
+const REST_LINKS = [
+  "https://www.youtube.com/watch?v=inpok4MKVLM",
+  "https://www.youtube.com/watch?v=4xDzrJKXOOY",
+  "https://www.youtube.com/watch?v=1ZYbU82GVz4",
+  "https://www.youtube.com/watch?v=sjkrrmBnpGE",
+];
+
+const getRestLink = () => REST_LINKS[Math.floor(Math.random() * REST_LINKS.length)];
+
+// ── Quiz UI ───────────────────────────────────────────────────────────────────
 const QuizUI = ({
   questions, loading, loadingMsg, onClose,
 }: {
@@ -91,7 +99,6 @@ const QuizUI = ({
 
   return (
     <div className="p-8 flex-1 overflow-y-auto">
-      {/* Loading */}
       {loading && (
         <div className="flex flex-col items-center gap-4 py-16">
           <Loader2 size={40} className="text-[#6C4AB6] animate-spin" />
@@ -100,12 +107,10 @@ const QuizUI = ({
         </div>
       )}
 
-      {/* Failed */}
       {!loading && questions.length === 0 && (
         <p className="text-white/60 text-center py-16">Failed to generate quiz. Try again.</p>
       )}
 
-      {/* Results */}
       {!loading && finished && (
         <div className="flex flex-col items-center gap-6 py-4">
           <div className="relative w-36 h-36">
@@ -147,7 +152,6 @@ const QuizUI = ({
         </div>
       )}
 
-      {/* Question */}
       {!loading && !finished && q && (
         <div className="space-y-6">
           <div className="space-y-2">
@@ -427,9 +431,9 @@ const StudyPlanPage = ({ userName, onBack }: StudyPlanProps) => {
   );
 
   const steps = [
-    { label: "Lesson",    icon: <Video size={14}/>,    color: "bg-blue-50 border-blue-200 text-blue-700"       },
+    { label: "Lesson",    icon: <Video size={14}/>,    color: "bg-blue-50 border-blue-200 text-blue-700"          },
     { label: "Practice",  icon: <BookOpen size={14}/>, color: "bg-emerald-50 border-emerald-200 text-emerald-700" },
-    { label: "Challenge", icon: <Target size={14}/>,   color: "bg-orange-50 border-orange-200 text-orange-700" },
+    { label: "Challenge", icon: <Target size={14}/>,   color: "bg-orange-50 border-orange-200 text-orange-700"    },
   ];
 
   return (
@@ -471,24 +475,47 @@ const StudyPlanPage = ({ userName, onBack }: StudyPlanProps) => {
           {plan.map((item, pIdx) => {
             const theme     = DAY_THEME[item.day] ?? DAY_THEME.Sunday;
             const topicIcon = TOPIC_ICONS[item.raw_topic] ?? "📚";
+            const isRest    = item.type === 'Rest';
+
             return (
               <div key={`${item.day}-${pIdx}`}
-                className={`flex flex-col md:flex-row items-start md:items-center justify-between p-7 rounded-[2.5rem] border-2 shadow-sm gap-6 ${theme.card}`}>
+                className={`flex flex-col md:flex-row items-start md:items-center justify-between p-7 rounded-[2.5rem] border-2 shadow-sm gap-6 ${
+                  isRest ? 'bg-purple-50 border-purple-200' : theme.card
+                }`}>
 
                 <div className="flex items-center gap-6 flex-1">
-                  <div className={`w-16 h-16 rounded-2xl flex flex-col items-center justify-center bg-white shadow-md shrink-0 ${theme.iconText}`}>
+                  {/* Day icon */}
+                  <div className={`w-16 h-16 rounded-2xl flex flex-col items-center justify-center bg-white shadow-md shrink-0 ${
+                    isRest ? 'text-purple-600' : theme.iconText
+                  }`}>
                     <span className="font-black text-xl leading-none">{item.day[0]}</span>
-                    <span className="text-lg leading-none mt-0.5">{topicIcon}</span>
+                    <span className="text-lg leading-none mt-0.5">{isRest ? '☕' : topicIcon}</span>
                   </div>
+
                   <div>
+                    {/* Day name + badge */}
                     <div className="flex items-center gap-3 mb-1 flex-wrap">
                       <h4 className="font-black text-slate-800 text-2xl tracking-tight leading-none">{item.day}</h4>
-                      <span className={`px-4 py-1.5 ${theme.badge} ${theme.badgeText} rounded-full text-sm font-black uppercase tracking-widest flex items-center gap-1.5`}>
-                        <span>{topicIcon}</span> {item.task_title}
-                      </span>
+                      {isRest ? (
+                        <span className="px-4 py-1.5 bg-purple-500 text-white rounded-full text-sm font-black uppercase tracking-widest flex items-center gap-1.5">
+                          ☕ Rest Day
+                        </span>
+                      ) : (
+                        <span className={`px-4 py-1.5 ${theme.badge} ${theme.badgeText} rounded-full text-sm font-black uppercase tracking-widest flex items-center gap-1.5`}>
+                          <span>{topicIcon}</span> {item.task_title}
+                        </span>
+                      )}
                     </div>
-                    <p className="text-[14px] font-bold text-slate-600 italic leading-relaxed">"{item.instruction}"</p>
-                    {item.type !== 'Rest' && (
+
+                    {/* Instruction */}
+                    <p className="text-[14px] font-bold text-slate-600 italic leading-relaxed">
+                      {isRest
+                        ? '"Your brain is rewiring. Rest is part of the plan. Recharge today."'
+                        : `"${item.instruction}"`}
+                    </p>
+
+                    {/* Quiz / Chat buttons — only on study days */}
+                    {!isRest && (
                       <div className="flex gap-2 mt-3">
                         <button onClick={() => setQuizTopic(item.raw_topic)}
                           className={`flex items-center gap-1.5 px-4 py-2 rounded-xl ${theme.btnSolid} ${theme.btnSolidHover} text-white font-black text-[11px] uppercase tracking-widest transition-all shadow-sm hover:scale-105`}>
@@ -503,12 +530,21 @@ const StudyPlanPage = ({ userName, onBack }: StudyPlanProps) => {
                   </div>
                 </div>
 
+                {/* Right side */}
                 <div className="flex flex-col gap-3 w-full md:w-[280px]">
-                  {item.type === 'Rest' ? (
-                    <button onClick={() => setSelectedVideoId("5qap5aO4i9A")}
-                      className="w-full py-5 rounded-2xl bg-gradient-to-r from-purple-500 to-indigo-500 text-white font-black text-xs uppercase shadow-md flex items-center justify-center gap-3 hover:scale-105 transition-all">
-                      <Coffee size={24}/> Neural Recharge
-                    </button>
+                  {isRest ? (
+                    <div className="flex flex-col gap-3">
+                      {/* Neural Recharge — opens YouTube in new tab */}
+                      <button
+                        onClick={() => window.open(getRestLink(), '_blank')}
+                        className="w-full py-4 rounded-2xl bg-gradient-to-r from-purple-500 to-indigo-500 text-white font-black text-xs uppercase shadow-md flex items-center justify-center gap-3 hover:scale-105 transition-all">
+                        <Coffee size={20}/> Neural Recharge
+                      </button>
+                      <div className="bg-purple-100 border border-purple-200 rounded-2xl px-4 py-3 text-center">
+                        <p className="text-purple-700 font-black text-xs uppercase tracking-widest mb-1">Today's Tip</p>
+                        <p className="text-purple-600 text-xs font-medium">Sleep, hydrate, take a walk 🌿</p>
+                      </div>
+                    </div>
                   ) : (
                     steps.map((step, sIdx) => {
                       const id      = `${item.day}-${sIdx}`;
