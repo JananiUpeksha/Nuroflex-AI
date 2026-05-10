@@ -5,7 +5,7 @@ import {
   ChevronRight, RotateCcw, Zap
 } from 'lucide-react';
 
-interface StudyPlanProps { userName: string; onBack: () => void; }
+interface StudyPlanProps { userName: string; category: string | null; onBack: () => void; }
 
 const API = 'http://127.0.0.1:8000';
 
@@ -37,11 +37,7 @@ async function fetchWeeklyQuiz(topics: string[]): Promise<QuizQuestion[]> {
   return data.questions ?? [];
 }
 
-async function fetchChatReply(
-  topic: string,
-  history: ChatMessage[],
-  message: string,
-): Promise<string> {
+async function fetchChatReply(topic: string, history: ChatMessage[], message: string): Promise<string> {
   const res = await fetch(`${API}/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -53,24 +49,17 @@ async function fetchChatReply(
   return data.reply ?? 'No response.';
 }
 
-// ── Relaxing YouTube links (opens in new tab — never embeds) ──────────────────
 const REST_LINKS = [
   "https://www.youtube.com/watch?v=inpok4MKVLM",
   "https://www.youtube.com/watch?v=4xDzrJKXOOY",
   "https://www.youtube.com/watch?v=1ZYbU82GVz4",
   "https://www.youtube.com/watch?v=sjkrrmBnpGE",
 ];
-
 const getRestLink = () => REST_LINKS[Math.floor(Math.random() * REST_LINKS.length)];
 
 // ── Quiz UI ───────────────────────────────────────────────────────────────────
-const QuizUI = ({
-  questions, loading, loadingMsg, onClose,
-}: {
-  questions: QuizQuestion[];
-  loading: boolean;
-  loadingMsg: string;
-  onClose: () => void;
+const QuizUI = ({ questions, loading, loadingMsg, onClose }: {
+  questions: QuizQuestion[]; loading: boolean; loadingMsg: string; onClose: () => void;
 }) => {
   const [current,  setCurrent]  = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
@@ -91,26 +80,24 @@ const QuizUI = ({
 
   const q   = questions[current];
   const pct = questions.length ? Math.round((score / questions.length) * 100) : 0;
-  const grade = pct >= 90 ? { label: 'S', color: 'text-yellow-400',  msg: '🏆 Perfect Neural Mastery!'        }
-              : pct >= 80 ? { label: 'A', color: 'text-emerald-400', msg: '🔥 Excellent Performance!'          }
-              : pct >= 70 ? { label: 'B', color: 'text-blue-400',    msg: '💪 Great Effort, Keep Going!'       }
-              : pct >= 60 ? { label: 'C', color: 'text-amber-400',   msg: '📚 Good Start, Review Weak Areas!'  }
-              :             { label: 'F', color: 'text-rose-400',     msg: '🔁 Revisit All Topics This Week!'   };
+  const grade = pct >= 90 ? { label: 'S', color: 'text-yellow-400',  msg: '🏆 Perfect Neural Mastery!'       }
+              : pct >= 80 ? { label: 'A', color: 'text-emerald-400', msg: '🔥 Excellent Performance!'         }
+              : pct >= 70 ? { label: 'B', color: 'text-blue-400',    msg: '💪 Great Effort, Keep Going!'      }
+              : pct >= 60 ? { label: 'C', color: 'text-amber-400',   msg: '📚 Good Start, Review Weak Areas!' }
+              :             { label: 'F', color: 'text-rose-400',     msg: '🔁 Revisit All Topics This Week!'  };
 
   return (
     <div className="p-8 flex-1 overflow-y-auto">
       {loading && (
         <div className="flex flex-col items-center gap-4 py-16">
-          <Loader2 size={40} className="text-[#6C4AB6] animate-spin" />
+          <Loader2 size={40} className="text-[#6C4AB6] animate-spin"/>
           <p className="text-white/60 font-bold uppercase tracking-widest text-xs">{loadingMsg}</p>
           <p className="text-white/30 text-xs">This may take a few seconds</p>
         </div>
       )}
-
       {!loading && questions.length === 0 && (
         <p className="text-white/60 text-center py-16">Failed to generate quiz. Try again.</p>
       )}
-
       {!loading && finished && (
         <div className="flex flex-col items-center gap-6 py-4">
           <div className="relative w-36 h-36">
@@ -151,7 +138,6 @@ const QuizUI = ({
           </div>
         </div>
       )}
-
       {!loading && !finished && q && (
         <div className="space-y-6">
           <div className="space-y-2">
@@ -161,17 +147,15 @@ const QuizUI = ({
             </div>
             <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
               <div className="h-full bg-gradient-to-r from-[#6C4AB6] to-indigo-400 rounded-full transition-all duration-500"
-                style={{ width: `${(current / questions.length) * 100}%` }} />
+                style={{ width: `${(current / questions.length) * 100}%` }}/>
             </div>
           </div>
-
           <div className="flex items-start gap-3">
             <span className="shrink-0 w-8 h-8 rounded-lg bg-[#6C4AB6]/30 border border-[#6C4AB6]/40 flex items-center justify-center text-[#6C4AB6] font-black text-xs">
               {current + 1}
             </span>
             <p className="text-white font-black text-lg leading-snug">{q.question}</p>
           </div>
-
           <div className="space-y-3">
             {q.options.map((opt, i) => {
               const isCorrect  = i === q.correct;
@@ -190,14 +174,12 @@ const QuizUI = ({
               );
             })}
           </div>
-
           {showExp && (
             <div className="bg-white/5 border border-white/10 rounded-xl p-4">
               <p className="text-white/50 text-xs font-black uppercase tracking-widest mb-1">Explanation</p>
               <p className="text-white/80 text-sm leading-relaxed">{q.explanation}</p>
             </div>
           )}
-
           {selected !== null && (
             <button onClick={next}
               className="w-full flex items-center justify-center gap-2 py-4 rounded-xl bg-[#6C4AB6] text-white font-black uppercase tracking-widest text-sm hover:bg-[#7d5bc9] transition-all">
@@ -211,11 +193,10 @@ const QuizUI = ({
   );
 };
 
-// ── Daily Quiz Modal ──────────────────────────────────────────────────────────
+// ── Modals ────────────────────────────────────────────────────────────────────
 const QuizModal = ({ topic, onClose }: { topic: string; onClose: () => void }) => {
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [loading,   setLoading]   = useState(true);
-
   useEffect(() => {
     fetchQuiz(topic)
       .then(q => setQuestions(q))
@@ -225,7 +206,6 @@ const QuizModal = ({ topic, onClose }: { topic: string; onClose: () => void }) =
       })
       .finally(() => setLoading(false));
   }, [topic]);
-
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/75 backdrop-blur-md p-4">
       <div className="relative w-full max-w-2xl bg-[#0F0F1A] border border-[#6C4AB6]/40 rounded-[2rem] overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
@@ -242,11 +222,9 @@ const QuizModal = ({ topic, onClose }: { topic: string; onClose: () => void }) =
   );
 };
 
-// ── Weekly Quiz Modal ─────────────────────────────────────────────────────────
 const WeeklyQuizModal = ({ plan, onClose }: { plan: any[]; onClose: () => void }) => {
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [loading,   setLoading]   = useState(true);
-
   useEffect(() => {
     const topics = [...new Set(plan.filter(d => d.type !== 'Rest').map(d => d.raw_topic))] as string[];
     fetchWeeklyQuiz(topics)
@@ -257,20 +235,15 @@ const WeeklyQuizModal = ({ plan, onClose }: { plan: any[]; onClose: () => void }
       })
       .finally(() => setLoading(false));
   }, []);
-
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
       <div className="relative w-full max-w-2xl bg-[#0F0F1A] border border-[#6C4AB6]/40 rounded-[2rem] overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
         <div className="flex items-center justify-between px-8 py-5 border-b border-white/10 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="bg-gradient-to-br from-[#6C4AB6] to-indigo-500 p-2 rounded-xl">
-              <Trophy size={18} className="text-white"/>
-            </div>
+            <div className="bg-gradient-to-br from-[#6C4AB6] to-indigo-500 p-2 rounded-xl"><Trophy size={18} className="text-white"/></div>
             <div>
               <p className="text-white font-black uppercase tracking-widest text-sm">Weekly Assessment</p>
-              {!loading && questions.length > 0 && (
-                <p className="text-white/40 text-xs mt-0.5">{questions.length} questions · All topics</p>
-              )}
+              {!loading && questions.length > 0 && <p className="text-white/40 text-xs mt-0.5">{questions.length} questions · All topics</p>}
             </div>
           </div>
           <button onClick={onClose} className="text-white/40 hover:text-white"><X size={22}/></button>
@@ -281,15 +254,13 @@ const WeeklyQuizModal = ({ plan, onClose }: { plan: any[]; onClose: () => void }
   );
 };
 
-// ── Chat Modal ────────────────────────────────────────────────────────────────
 const ChatModal = ({ topic, onClose }: { topic: string; onClose: () => void }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([
-    { role: 'ai', text: `Hey! I'm your AI tutor for ${topic}. Ask me anything — concepts, examples, tricks, or practice problems. Let's go! 🚀` }
+    { role: 'ai', text: `Hey! I'm your AI tutor for ${topic}. Ask me anything! 🚀` }
   ]);
   const [input,   setInput]   = useState('');
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
-
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
   const send = async () => {
@@ -303,10 +274,7 @@ const ChatModal = ({ topic, onClose }: { topic: string; onClose: () => void }) =
       const reply = await fetchChatReply(topic, newHistory, text);
       setMessages(m => [...m, { role: 'ai', text: reply }]);
     } catch (e: any) {
-      const msg = e.message === 'RATE_LIMITED'
-        ? '⚠️ Rate limit reached. Please wait ~1 minute.'
-        : '⚠️ Something went wrong. Please try again.';
-      setMessages(m => [...m, { role: 'ai', text: msg }]);
+      setMessages(m => [...m, { role: 'ai', text: e.message === 'RATE_LIMITED' ? '⚠️ Rate limit reached. Please wait ~1 minute.' : '⚠️ Something went wrong.' }]);
     }
     setLoading(false);
   };
@@ -324,14 +292,10 @@ const ChatModal = ({ topic, onClose }: { topic: string; onClose: () => void }) =
           </div>
           <button onClick={onClose} className="text-white/40 hover:text-white"><X size={22}/></button>
         </div>
-
         <div className="flex-1 overflow-y-auto px-8 py-6 space-y-4">
           {messages.map((msg, i) => (
             <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[80%] px-5 py-3 rounded-2xl text-sm leading-relaxed font-medium
-                ${msg.role === 'user'
-                  ? 'bg-[#6C4AB6] text-white rounded-br-sm'
-                  : 'bg-white/8 border border-white/10 text-white/85 rounded-bl-sm'}`}>
+              <div className={`max-w-[80%] px-5 py-3 rounded-2xl text-sm leading-relaxed font-medium ${msg.role === 'user' ? 'bg-[#6C4AB6] text-white rounded-br-sm' : 'bg-white/8 border border-white/10 text-white/85 rounded-bl-sm'}`}>
                 {msg.text}
               </div>
             </div>
@@ -346,15 +310,12 @@ const ChatModal = ({ topic, onClose }: { topic: string; onClose: () => void }) =
           )}
           <div ref={bottomRef}/>
         </div>
-
         <div className="px-6 py-4 border-t border-white/10 shrink-0">
           <div className="flex gap-3 items-center bg-white/5 border border-white/10 rounded-xl px-4 py-3">
-            <input value={input} onChange={e => setInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && send()}
+            <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && send()}
               placeholder={`Ask anything about ${topic}...`}
               className="flex-1 bg-transparent text-white text-sm outline-none placeholder:text-white/25 font-medium"/>
-            <button onClick={send} disabled={loading || !input.trim()}
-              className="bg-[#6C4AB6] p-2 rounded-lg disabled:opacity-30 hover:bg-[#7d5bc9] transition-all">
+            <button onClick={send} disabled={loading || !input.trim()} className="bg-[#6C4AB6] p-2 rounded-lg disabled:opacity-30 hover:bg-[#7d5bc9] transition-all">
               <Send size={16} className="text-white"/>
             </button>
           </div>
@@ -364,21 +325,13 @@ const ChatModal = ({ topic, onClose }: { topic: string; onClose: () => void }) =
   );
 };
 
-// ── Topic Icons & Day Themes ──────────────────────────────────────────────────
+// ── Constants ─────────────────────────────────────────────────────────────────
 const TOPIC_ICONS: Record<string, string> = {
-  "Polynomials":           "📐",
-  "Chain Rule":            "🔗",
-  "Integration by Parts":  "∫",
-  "Matrix Multiplication": "🔢",
-  "Probability":           "🎲",
+  "Polynomials": "📐", "Chain Rule": "🔗", "Integration by Parts": "∫",
+  "Matrix Multiplication": "🔢", "Probability": "🎲",
 };
 
-const DAY_THEME: Record<string, {
-  card: string; iconText: string;
-  badge: string; badgeText: string;
-  btnSolid: string; btnSolidHover: string;
-  btnOutline: string; btnOutlineText: string; btnOutlineHover: string;
-}> = {
+const DAY_THEME: Record<string, any> = {
   Monday:    { card: "bg-blue-50 border-blue-200",       iconText: "text-blue-700",    badge: "bg-blue-600",    badgeText: "text-white", btnSolid: "bg-blue-600",    btnSolidHover: "hover:bg-blue-700",    btnOutline: "border-blue-600",   btnOutlineText: "text-blue-600",   btnOutlineHover: "hover:bg-blue-600"   },
   Tuesday:   { card: "bg-emerald-50 border-emerald-200", iconText: "text-emerald-700", badge: "bg-emerald-600", badgeText: "text-white", btnSolid: "bg-emerald-600", btnSolidHover: "hover:bg-emerald-700", btnOutline: "border-emerald-600", btnOutlineText: "text-emerald-600", btnOutlineHover: "hover:bg-emerald-600" },
   Wednesday: { card: "bg-amber-50 border-amber-200",     iconText: "text-amber-700",   badge: "bg-amber-500",   badgeText: "text-white", btnSolid: "bg-amber-500",   btnSolidHover: "hover:bg-amber-600",   btnOutline: "border-amber-500",  btnOutlineText: "text-amber-600",  btnOutlineHover: "hover:bg-amber-500"  },
@@ -389,7 +342,7 @@ const DAY_THEME: Record<string, {
 };
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
-const StudyPlanPage = ({ userName, onBack }: StudyPlanProps) => {
+const StudyPlanPage = ({ userName, category, onBack }: StudyPlanProps) => {
   const [plan,            setPlan]            = useState<any[]>([]);
   const [loading,         setLoading]         = useState(true);
   const [subStatuses,     setSubStatuses]     = useState<Record<string, string>>({});
@@ -398,13 +351,45 @@ const StudyPlanPage = ({ userName, onBack }: StudyPlanProps) => {
   const [chatTopic,       setChatTopic]       = useState<string | null>(null);
   const [weeklyQuiz,      setWeeklyQuiz]      = useState(false);
 
+  // ── FIX: use a ref to ensure fetch only runs ONCE per mount ──────────────────
+  const hasFetched = useRef(false);
+
   useEffect(() => {
+    // Prevent double-fetch in React StrictMode or re-renders
+    if (hasFetched.current) return;
+    hasFetched.current = true;
+
     setLoading(true);
-    fetch(`${API}/generate-7day-plan/${encodeURIComponent(userName)}`)
-      .then(res => res.json())
-      .then(data => { setPlan(data.weekly_plan); setLoading(false); })
-      .catch(() => setLoading(false));
-  }, [userName]);
+
+    // Always clear the old plan first when a category is chosen
+    // so the backend generates a fresh one
+    const clearAndFetch = async () => {
+      try {
+        // If category selected, clear old plan first
+        if (category) {
+          await fetch(`http://127.0.0.1:8000/clear-plan/${encodeURIComponent(userName)}`, {
+            method: 'POST',
+          });
+        }
+
+        // Build URL
+        let url = `${API}/generate-7day-plan/${encodeURIComponent(userName)}`;
+        if (category) {
+          url += `?category=${encodeURIComponent(category)}`;
+        }
+
+        const res  = await fetch(url);
+        const data = await res.json();
+        setPlan(data.weekly_plan ?? []);
+      } catch {
+        // ignore
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    clearAndFetch();
+  }, []); // empty deps — runs exactly once on mount
 
   const extractVideoId = (urlOrId: string): string => {
     if (!urlOrId) return '';
@@ -426,7 +411,9 @@ const StudyPlanPage = ({ userName, onBack }: StudyPlanProps) => {
   if (loading) return (
     <div className="h-screen flex flex-col items-center justify-center bg-[#F8FAFC]">
       <div className="w-16 h-16 border-4 border-[#6C4AB6] border-t-transparent rounded-full animate-spin mb-4"/>
-      <p className="font-black text-[#6C4AB6] tracking-widest uppercase text-xs">Mapping Neural Path...</p>
+      <p className="font-black text-[#6C4AB6] tracking-widest uppercase text-xs">
+        {category ? `Building ${category} Plan...` : 'Mapping Neural Path...'}
+      </p>
     </div>
   );
 
@@ -466,9 +453,14 @@ const StudyPlanPage = ({ userName, onBack }: StudyPlanProps) => {
       <div className="max-w-5xl mx-auto w-full bg-white rounded-[3rem] shadow-xl flex-1 flex flex-col overflow-hidden border border-slate-100 z-10">
         <div className="px-10 py-6 border-b flex items-center gap-4 bg-white/80">
           <div className="bg-[#6C4AB6] p-3 rounded-2xl text-white shadow-lg"><Sparkles size={24}/></div>
-          <h1 className="text-2xl font-black text-slate-800 tracking-tight uppercase">
-            Success Roadmap: {userName}
-          </h1>
+          <div>
+            <h1 className="text-2xl font-black text-slate-800 tracking-tight uppercase">
+              Success Roadmap: {userName}
+            </h1>
+            {category && (
+              <p className="text-sm font-bold text-[#6C4AB6] mt-0.5">Focus: {category}</p>
+            )}
+          </div>
         </div>
 
         <div className="flex-1 px-8 py-6 overflow-y-auto space-y-5 bg-slate-50/30">
@@ -479,21 +471,15 @@ const StudyPlanPage = ({ userName, onBack }: StudyPlanProps) => {
 
             return (
               <div key={`${item.day}-${pIdx}`}
-                className={`flex flex-col md:flex-row items-start md:items-center justify-between p-7 rounded-[2.5rem] border-2 shadow-sm gap-6 ${
-                  isRest ? 'bg-purple-50 border-purple-200' : theme.card
-                }`}>
+                className={`flex flex-col md:flex-row items-start md:items-center justify-between p-7 rounded-[2.5rem] border-2 shadow-sm gap-6 ${isRest ? 'bg-purple-50 border-purple-200' : theme.card}`}>
 
                 <div className="flex items-center gap-6 flex-1">
-                  {/* Day icon */}
-                  <div className={`w-16 h-16 rounded-2xl flex flex-col items-center justify-center bg-white shadow-md shrink-0 ${
-                    isRest ? 'text-purple-600' : theme.iconText
-                  }`}>
+                  <div className={`w-16 h-16 rounded-2xl flex flex-col items-center justify-center bg-white shadow-md shrink-0 ${isRest ? 'text-purple-600' : theme.iconText}`}>
                     <span className="font-black text-xl leading-none">{item.day[0]}</span>
                     <span className="text-lg leading-none mt-0.5">{isRest ? '☕' : topicIcon}</span>
                   </div>
 
                   <div>
-                    {/* Day name + badge */}
                     <div className="flex items-center gap-3 mb-1 flex-wrap">
                       <h4 className="font-black text-slate-800 text-2xl tracking-tight leading-none">{item.day}</h4>
                       {isRest ? (
@@ -506,15 +492,9 @@ const StudyPlanPage = ({ userName, onBack }: StudyPlanProps) => {
                         </span>
                       )}
                     </div>
-
-                    {/* Instruction */}
                     <p className="text-[14px] font-bold text-slate-600 italic leading-relaxed">
-                      {isRest
-                        ? '"Your brain is rewiring. Rest is part of the plan. Recharge today."'
-                        : `"${item.instruction}"`}
+                      {isRest ? '"Your brain is rewiring. Rest is part of the plan. Recharge today."' : `"${item.instruction}"`}
                     </p>
-
-                    {/* Quiz / Chat buttons — only on study days */}
                     {!isRest && (
                       <div className="flex gap-2 mt-3">
                         <button onClick={() => setQuizTopic(item.raw_topic)}
@@ -530,13 +510,10 @@ const StudyPlanPage = ({ userName, onBack }: StudyPlanProps) => {
                   </div>
                 </div>
 
-                {/* Right side */}
                 <div className="flex flex-col gap-3 w-full md:w-[280px]">
                   {isRest ? (
                     <div className="flex flex-col gap-3">
-                      {/* Neural Recharge — opens YouTube in new tab */}
-                      <button
-                        onClick={() => window.open(getRestLink(), '_blank')}
+                      <button onClick={() => window.open(getRestLink(), '_blank')}
                         className="w-full py-4 rounded-2xl bg-gradient-to-r from-purple-500 to-indigo-500 text-white font-black text-xs uppercase shadow-md flex items-center justify-center gap-3 hover:scale-105 transition-all">
                         <Coffee size={20}/> Neural Recharge
                       </button>
@@ -558,9 +535,7 @@ const StudyPlanPage = ({ userName, onBack }: StudyPlanProps) => {
                         <div key={sIdx} className="flex items-center gap-2">
                           <button onClick={handleStepClick}
                             className={`flex-1 flex items-center justify-center gap-3 py-3 rounded-xl font-black text-[10px] uppercase border-2 transition-all shadow-sm hover:scale-105
-                              ${status === 'done'   ? 'bg-emerald-500 border-emerald-500 text-white' :
-                                status === 'missed' ? 'bg-rose-500 border-rose-500 text-white' :
-                                `bg-white ${step.color}`}`}>
+                              ${status === 'done' ? 'bg-emerald-500 border-emerald-500 text-white' : status === 'missed' ? 'bg-rose-500 border-rose-500 text-white' : `bg-white ${step.color}`}`}>
                             {step.icon} {step.label}
                           </button>
                           <div className="flex gap-1">

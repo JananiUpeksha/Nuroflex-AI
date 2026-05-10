@@ -1,7 +1,7 @@
 """
 app/main.py
 """
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -14,9 +14,11 @@ from app.core.trainer        import NeuroTrainer
 from app.core.environment    import StudyEnvironment
 from app.core.dao            import StudentDAO
 from app.models.student_db   import StudentDB
+from app.models.syllabus_db  import SyllabusDB
 from app.services.discovery  import ContentDiscovery
 from app.services.ai_service import generate_quiz, generate_weekly_quiz, chat_with_tutor
 
+# ── Load trained model ─────────────────────────────────────────────────────────
 MODEL_PATH = "app/models/neuro_brain_global.h5"
 trainer    = NeuroTrainer()
 
@@ -40,6 +42,7 @@ app.add_middleware(
 discovery_service = ContentDiscovery()
 env               = StudyEnvironment()
 
+# ── YouTube quota guard ────────────────────────────────────────────────────────
 MAX_DAILY_FETCHES = 150
 _yt_quota         = {"count": 0, "reset_date": date.today()}
 _yt_quota_lock    = Lock()
@@ -66,16 +69,17 @@ def get_learning_stack(topic):
         return []
     try:
         stack = discovery_service.fetch_learning_stack(topic)
-    except Exception as exc:
+    except Exception:
         stack = []
     with _stack_cache_lock:
         _stack_cache[topic] = stack
     return stack
 
+# ── Constants ──────────────────────────────────────────────────────────────────
 AUTHORIZED_STUDENTS = [
     "Janani Upeksha", "Aman Perera", "Sarah Silva", "Raj Kumar",
     "Li Wei",         "Elena Rossi", "Victor Hugo", "Chloe Bennet",
-    "Omar Hassan",    "Yuki Tanaka", 
+    "Omar Hassan",    "Yuki Tanaka",
 ]
 
 TOPIC_POOL = [
@@ -86,11 +90,12 @@ TOPIC_POOL = [
 DAYS    = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 ACTIONS = ["Watch Video", "Take Quiz", "Active Recall", "Take a Break"]
 
+# ── Helpers ────────────────────────────────────────────────────────────────────
 def get_detailed_mission(topic, t_type):
     descriptions = {
-        "Video":    f"Visualizing {topic}: Explore core geometry and logic.",
-        "Quiz":     f"{topic} Instinct: Speed is key. Solve these drills.",
-        "Exercise": f"{topic} Deep Dive: Bridge theory to engineering.",
+        "Video":    f"Visualizing {topic}: Explore core concepts and logic. Watch how ideas connect in real-world applications.",
+        "Quiz":     f"{topic} Instinct: Speed is key. Solve these drills to turn knowledge into a neural reflex.",
+        "Exercise": f"{topic} Deep Dive: Bridge theory to practice. Solve problems requiring multi-step logic.",
         "Rest":     "Neural Consolidation: Step away to allow synaptic connections to solidify.",
     }
     return descriptions.get(t_type, f"Advanced neural reinforcement for {topic}.")
@@ -122,20 +127,48 @@ def _to_array(plan_dict):
         })
     return result
 
+def _get_topics_from_syllabus(db: Session, category: str, count: int = 7) -> list[str]:
+    """
+    Pull topics from the syllabus table for the given category.
+    Falls back to TOPIC_POOL if not enough topics found.
+    """
+    if category and category.lower() != "ai":
+        topics = (
+            db.query(SyllabusDB.skill_name)
+            .filter(SyllabusDB.category == category, SyllabusDB.region == "USA")
+            .all()
+        )
+        skill_names = [t[0] for t in topics]
+        if len(skill_names) >= count:
+            return random.sample(skill_names, count)
+        elif skill_names:
+            # Not enough — pad with repeats
+            while len(skill_names) < count:
+                skill_names.append(random.choice(skill_names))
+            return skill_names
+
+    # AI decides or fallback — use existing TOPIC_POOL logic
+    return random.sample(TOPIC_POOL, 5) + random.sample(TOPIC_POOL, 2)
+
 def _build_plan(state, topics: list[str]) -> dict:
     unique_topics = {t for t in topics if t}
-    stacks = {t: get_learning_stack(t) for t in unique_topics}
-    plan = {}
+    stacks        = {t: get_learning_stack(t) for t in unique_topics}
+    plan          = {}
     current_state = state.copy()
     for i, day in enumerate(DAYS):
-        topic    = topics[i]
-        action   = trainer.get_action(current_state, training=False)
-        activity = ACTIONS[action]
-        t_type   = _activity_to_type(activity)
+        topic         = topics[i]
+        action        = trainer.get_action(current_state, training=False)
+        activity      = ACTIONS[action]
+        t_type        = _activity_to_type(activity)
         current_state = env.step(current_state, action)
-        plan[day] = {"topic": topic, "activity": activity, "learning_stack": stacks.get(topic, []) if t_type != "Rest" else []}
+        plan[day]     = {
+            "topic":          topic,
+            "activity":       activity,
+            "learning_stack": stacks.get(topic, []) if t_type != "Rest" else [],
+        }
     return plan
 
+# ── Startup ────────────────────────────────────────────────────────────────────
 @app.on_event("startup")
 def seed_database():
     db = next(get_db())
@@ -153,19 +186,61 @@ def seed_database():
             ))
     db.commit()
 
+# ── Syllabus routes ────────────────────────────────────────────────────────────
+@app.get("/syllabus/categories")
+async def get_categories(db: Session = Depends(get_db)):
+    """Returns all unique USA categories from the syllabus table."""
+    from sqlalchemy import distinct
+    cats = (
+        db.query(distinct(SyllabusDB.category))
+        .filter(SyllabusDB.region == "USA")
+        .all()
+    )
+    categories = sorted([c[0] for c in cats if c[0]])
+    return {"categories": categories}
+
+@app.get("/syllabus/topics")
+async def get_topics(category: str = Query(None), db: Session = Depends(get_db)):
+    """Returns topics for a given category. If no category, returns all USA topics."""
+    query = db.query(SyllabusDB).filter(SyllabusDB.region == "USA")
+    if category:
+        query = query.filter(SyllabusDB.category == category)
+    topics = query.all()
+    return {
+        "topics": [
+            {
+                "id":          t.id,
+                "skill_name":  t.skill_name,
+                "category":    t.category,
+                "difficulty":  t.difficulty,
+                "best_action": t.best_action,
+            }
+            for t in topics
+        ]
+    }
+
+# ── Study plan routes ──────────────────────────────────────────────────────────
 @app.get("/generate-7day-plan/{student_id}")
-async def generate_plan(student_id: str, db: Session = Depends(get_db)):
+async def generate_plan(
+    student_id: str,
+    category:   str = Query(None),
+    db:         Session = Depends(get_db),
+):
     student = StudentDAO.get_student(db, student_id)
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
-    if student.study_plan:
+
+    # If there is an existing plan AND no new category was requested, return cached plan
+    if student.study_plan and not category:
         return {"weekly_plan": _to_array(student.study_plan)}
+
     state  = StudentDAO.get_student_state_vector(db, student_id)
-    topics = random.sample(TOPIC_POOL, 5) + random.sample(TOPIC_POOL, 2)
+    topics = _get_topics_from_syllabus(db, category or "ai")
     plan   = _build_plan(state, topics)
     StudentDAO.save_study_plan(db, student_id, plan)
     return {"weekly_plan": _to_array(plan)}
 
+# ── Student report ─────────────────────────────────────────────────────────────
 @app.get("/student-report/{student_id}")
 async def get_student_report(student_id: str, db: Session = Depends(get_db)):
     student = StudentDAO.get_student(db, student_id)
@@ -184,7 +259,6 @@ async def get_student_report(student_id: str, db: Session = Depends(get_db)):
     topic_mastery = {k: round(v * 100) for k, v in (student.topic_mastery or {}).items()}
     topic_speed   = {k: round(v * 100) for k, v in (student.response_speed or {}).items()}
 
-    # Strong and weak topics
     if student.topic_mastery:
         strong_topic = max(student.topic_mastery, key=student.topic_mastery.get)
         weak_topic   = min(student.topic_mastery, key=student.topic_mastery.get)
@@ -194,7 +268,6 @@ async def get_student_report(student_id: str, db: Session = Depends(get_db)):
         strong_topic = weak_topic = "N/A"
         strong_pct   = weak_pct   = 0
 
-    # Status
     if stress > 0.75:
         status = "High Stress — Needs Support"
     elif avg_mastery >= 0.80:
@@ -204,13 +277,11 @@ async def get_student_report(student_id: str, db: Session = Depends(get_db)):
     else:
         status = "On Track"
 
-    # Dynamic AI advice based on actual student data
     advice_parts = []
     if stress > 0.75:
         advice_parts.append(f"Student is under high cognitive load ({round(stress*100)}% stress). Immediate intervention needed — reduce workload and prescribe rest.")
     elif stress > 0.55:
         advice_parts.append(f"Stress is elevated at {round(stress*100)}%. Monitor closely and avoid adding new topics this week.")
-
     if avg_mastery >= 0.80:
         advice_parts.append(f"Excellent mastery across all topics ({round(avg_mastery*100)}%). Ready for advanced challenge problems.")
     elif avg_mastery >= 0.60:
@@ -219,18 +290,12 @@ async def get_student_report(student_id: str, db: Session = Depends(get_db)):
         advice_parts.append(f"Moderate mastery at {round(avg_mastery*100)}%. Needs consistent daily practice, especially in {weak_topic}.")
     else:
         advice_parts.append(f"Low mastery at {round(avg_mastery*100)}%. Start with foundational videos and avoid quizzes until confidence builds.")
-
     if avg_speed < 0.40:
         advice_parts.append(f"Response speed is slow ({round(avg_speed*100)}%). Assign timed daily drills to build fluency.")
-    elif avg_speed >= 0.80:
-        advice_parts.append(f"Response speed is excellent ({round(avg_speed*100)}%).")
-
     if resilience < 0.50:
         advice_parts.append(f"Resilience is low ({round(resilience*100)}%) — student struggles after mistakes. Positive reinforcement and retry culture are essential.")
-
     advice = " ".join(advice_parts) if advice_parts else "Student is progressing steadily. Continue current plan."
 
-    # Dynamic action plan
     actions = []
     if stress > 0.75:
         actions.append(f"URGENT: Reduce assignment load immediately — stress at {round(stress*100)}%. Prescribe 2-3 rest days this week.")
@@ -249,8 +314,7 @@ async def get_student_report(student_id: str, db: Session = Depends(get_db)):
     if not actions:
         actions.append(f"Student is performing well overall. Consider peer tutoring or advanced challenges in {strong_topic} to maintain momentum.")
 
-    # Study plan summary
-    plan      = student.study_plan or {}
+    plan       = student.study_plan or {}
     rest_days  = sum(1 for d in plan.values() if "Break" in d.get("activity", ""))
     study_days = len(plan) - rest_days
 
@@ -280,6 +344,7 @@ async def get_student_report(student_id: str, db: Session = Depends(get_db)):
         },
     }
 
+# ── Simulation routes ──────────────────────────────────────────────────────────
 @app.get("/recommend-action/{student_id}")
 async def recommend_action(student_id: str, db: Session = Depends(get_db)):
     state = StudentDAO.get_student_state_vector(db, student_id)
@@ -300,6 +365,7 @@ async def update_state(student_id: str, req: StateUpdateRequest, db: Session = D
     StudentDAO.update_student_state(db, student_id, mastery_delta=req.mastery_delta, stress_delta=req.stress_delta)
     return {"status": "updated", "student_id": student_id}
 
+# ── AI quiz / chat routes ──────────────────────────────────────────────────────
 @app.get("/quiz/{topic}")
 async def get_quiz(topic: str):
     try:
