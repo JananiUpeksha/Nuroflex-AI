@@ -19,7 +19,10 @@ from app.services.discovery  import ContentDiscovery
 from app.services.ai_service import generate_quiz, generate_weekly_quiz, chat_with_tutor
 
 # ── Load trained model ─────────────────────────────────────────────────────────
-MODEL_PATH = "app/models/neuro_brain_global.h5"
+MODEL_PATH = "app/models/neuro_brain_global.weights.h5"
+# Also try legacy format
+if not os.path.exists(MODEL_PATH):
+    MODEL_PATH = "app/models/neuro_brain_global.h5"
 trainer    = NeuroTrainer()
 
 if os.path.exists(MODEL_PATH):
@@ -154,14 +157,19 @@ def _build_plan(state, topics: list[str]) -> dict:
     unique_topics = {t for t in topics if t}
     stacks        = {t: get_learning_stack(t) for t in unique_topics}
     plan          = {}
-    current_state = state.copy()
+
+    # Use fresh state each day so stress doesn't snowball into all-REST
+    # Vary stress slightly per day to get action diversity
+    import numpy as np
     for i, day in enumerate(DAYS):
-        topic         = topics[i]
-        action        = trainer.get_action(current_state, training=False)
-        activity      = ACTIONS[action]
-        t_type        = _activity_to_type(activity)
-        current_state = env.step(current_state, action)
-        plan[day]     = {
+        topic        = topics[i]
+        day_state    = state.copy()
+        # Simulate slight daily stress variation so model picks different actions
+        day_state[4] = float(np.clip(state[4] + np.random.uniform(-0.15, 0.15), 0.0, 1.0))
+        action       = trainer.get_action(day_state, training=False)
+        activity     = ACTIONS[action]
+        t_type       = _activity_to_type(activity)
+        plan[day]    = {
             "topic":          topic,
             "activity":       activity,
             "learning_stack": stacks.get(topic, []) if t_type != "Rest" else [],
@@ -176,11 +184,11 @@ def seed_database():
         if not StudentDAO.get_student(db, name):
             db.add(StudentDB(
                 student_id           = name,
-                topic_mastery        = {t: 0.5 for t in TOPIC_POOL},
-                response_speed       = {t: 0.5 for t in TOPIC_POOL},
-                connectivity_score   = 0.7,
-                resilience_factor    = 0.7,
-                current_stress_level = 0.3,
+                topic_mastery        = {t: round(__import__("random").uniform(0.3, 0.9), 2) for t in TOPIC_POOL},
+                response_speed       = {t: round(__import__("random").uniform(0.3, 0.8), 2) for t in TOPIC_POOL},
+                connectivity_score   = round(__import__("random").uniform(0.5, 0.9), 2),
+                resilience_factor    = round(__import__("random").uniform(0.5, 0.9), 2),
+                current_stress_level = round(__import__("random").uniform(0.1, 0.7), 2),
                 retention_score      = 0.7,
                 study_plan           = None,
             ))
@@ -220,6 +228,16 @@ async def get_topics(category: str = Query(None), db: Session = Depends(get_db))
     }
 
 # ── Study plan routes ──────────────────────────────────────────────────────────
+
+@app.post("/clear-plan/{student_id}")
+async def clear_plan(student_id: str, db: Session = Depends(get_db)):
+    student = StudentDAO.get_student(db, student_id)
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+    student.study_plan = None
+    db.commit()
+    return {"status": "cleared", "student_id": student_id}
+
 @app.get("/generate-7day-plan/{student_id}")
 async def generate_plan(
     student_id: str,

@@ -1,6 +1,5 @@
 """
 run_training.py  —  PHASE 2: RL Simulation Fine-Tuning
-Run AFTER train_global.py:  python run_training.py
 """
 import os, json, time, collections
 import numpy as np
@@ -21,14 +20,21 @@ os.makedirs(LOG_DIR,      exist_ok=True)
 
 
 def sample_student_state() -> np.ndarray:
+    # Balanced archetypes — equal chance for each type
     archetypes = [
-        [0.2, 0.3, 0.5, 0.5, 0.3, 0.8],
-        [0.3, 0.2, 0.4, 0.3, 0.7, 0.5],
-        [0.5, 0.5, 0.7, 0.6, 0.4, 0.7],
-        [0.8, 0.8, 0.9, 0.8, 0.2, 0.9],
+        [0.2, 0.3, 0.5, 0.5, 0.2, 0.8],   # beginner, low stress    → Video
+        [0.3, 0.2, 0.4, 0.3, 0.2, 0.5],   # weak, low stress        → Video/Recall
+        [0.5, 0.5, 0.7, 0.6, 0.3, 0.7],   # average, low stress     → Quiz/Recall
+        [0.8, 0.8, 0.9, 0.8, 0.2, 0.9],   # advanced, low stress    → Quiz/Recall
+        [0.6, 0.6, 0.7, 0.7, 0.3, 0.7],   # good, moderate stress   → Recall
+        [0.4, 0.4, 0.5, 0.5, 0.5, 0.6],   # average, moderate       → Video
+        [0.3, 0.2, 0.4, 0.3, 0.75, 0.5],  # weak, HIGH stress       → Break
+        [0.5, 0.5, 0.6, 0.5, 0.80, 0.6],  # average, HIGH stress    → Break
+        [0.7, 0.7, 0.8, 0.7, 0.85, 0.7],  # good, BURNOUT           → Break
+        [0.4, 0.3, 0.5, 0.4, 0.90, 0.4],  # weak, BURNOUT           → Break
     ]
-    base  = np.array(archetypes[np.random.randint(4)], dtype=np.float32)
-    noise = np.random.uniform(-0.1, 0.1, size=6).astype(np.float32)
+    base  = np.array(archetypes[np.random.randint(len(archetypes))], dtype=np.float32)
+    noise = np.random.uniform(-0.05, 0.05, size=6).astype(np.float32)
     return np.clip(base + noise, 0.0, 1.0)
 
 
